@@ -74,7 +74,10 @@ agents-wrapped --provider codex --last 7d
 agents-wrapped --json | jq '.topModels'
 ```
 
-The `--png` card renders at 2× (2160×3000) for crisp sharing.
+The `--png` card renders at 2× for crisp sharing. Pass a single `--provider`
+(e.g. `--provider codex`) and the card **re-themes to that tool's brand color**,
+retitles ("Codex Wrapped"), and swaps the provider comparison for a deeper
+per-provider token breakdown.
 
 ## Your coding personality
 
@@ -88,8 +91,11 @@ four binary axes, like an MBTI for AI agents:
 | **S / B** | Steady / Bursty | streak & consistency |
 | **D / Q** | Deep / Quick | tokens per session |
 
-That's 16 archetypes — from **The Grandmaster** (`HPSD`) to **The Minimalist**
-(`LFBQ`). Your type shows on the card, in the terminal, and under `--json` (`.persona`).
+Each axis is a continuous 0–1 score (volume is log-scaled; diversity uses a
+Herfindahl index over providers + models; rhythm uses active-day density; depth
+uses tokens per session) then thresholded to a letter. That's 16 archetypes —
+from **The Grandmaster** (`HPSD`) to **The Minimalist** (`LFBQ`). Your type and
+its raw scores show on the card, in the terminal, and under `--json` (`.persona`).
 
 ## Supported providers
 
