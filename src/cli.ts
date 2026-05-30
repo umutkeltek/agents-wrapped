@@ -1,3 +1,5 @@
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { ADAPTERS, detectAvailable } from "./adapters/index.js";
 import { aggregate } from "./core/aggregate.js";
@@ -23,6 +25,8 @@ Providers:
   --list-providers     Show detected providers and exit.
 
 Output:
+  --png                Also render a shareable PNG card (~/agents-wrapped.png).
+  --out <path>         PNG output path (implies --png).
   --json               Print raw stats as JSON instead of the card.
   -h, --help           Show this help.
 `;
@@ -38,6 +42,8 @@ async function main() {
       provider: { type: "string" },
       "list-providers": { type: "boolean" },
       json: { type: "boolean" },
+      png: { type: "boolean" },
+      out: { type: "string" },
       help: { type: "boolean", short: "h" },
     },
     allowPositionals: true,
@@ -106,6 +112,14 @@ async function main() {
   }
 
   process.stdout.write(renderTerminal(stats) + "\n");
+
+  if (values.png || values.out) {
+    const { renderPng } = await import("./render/png.js");
+    const outPath = values.out ?? join(homedir(), "agents-wrapped.png");
+    process.stdout.write(`  Rendering card → ${outPath} …\n`);
+    await renderPng(stats, outPath);
+    process.stdout.write(`  ✓ Saved ${outPath}\n\n`);
+  }
 }
 
 main().catch((err) => {
