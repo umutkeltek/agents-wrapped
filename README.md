@@ -74,6 +74,23 @@ agents-wrapped --provider codex --last 7d
 agents-wrapped --json | jq '.topModels'
 ```
 
+The `--png` card renders at 2× (2160×3000) for crisp sharing.
+
+## Your coding personality
+
+Every wrapped computes a fun **16-type coding personality** from your real usage —
+four binary axes, like an MBTI for AI agents:
+
+| Axis | | |
+|------|--|--|
+| **H / L** | Heavy / Light | total token volume |
+| **P / F** | Polyglot / Faithful | spread across agents |
+| **S / B** | Steady / Bursty | streak & consistency |
+| **D / Q** | Deep / Quick | tokens per session |
+
+That's 16 archetypes — from **The Grandmaster** (`HPSD`) to **The Minimalist**
+(`LFBQ`). Your type shows on the card, in the terminal, and under `--json` (`.persona`).
+
 ## Supported providers
 
 | Provider | Source it reads | Status |
