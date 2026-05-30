@@ -7,7 +7,7 @@ import { Card } from "./card.js";
 import { loadFonts } from "./fonts.js";
 
 const CARD_WIDTH = 1080;
-const CARD_HEIGHT = 1500;
+const CARD_HEIGHT = 1640;
 const DEFAULT_SCALE = 2; // rasterize at 2x for a crisp, shareable image
 
 let wasmReady: Promise<void> | null = null;

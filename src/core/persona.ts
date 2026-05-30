@@ -1,19 +1,22 @@
 import type { Stats } from "../types.js";
 
-// A fun "16 personalities" for AI coding, derived from real usage. Four binary
-// axes → a 4-letter code → a named archetype. Shareable, like an MBTI for agents.
+// A "16 personalities" for AI coding, derived from real usage. Four axes, each
+// computed from a continuous 0..1 score then thresholded to a letter:
 //
-//   H/L  Heavy vs Light     — total token volume
-//   P/F  Polyglot vs Faithful — spread across providers
-//   S/B  Steady vs Bursty   — streak / consistency
-//   D/Q  Deep vs Quick      — tokens per session
+//   H/L  Heavy   / Light     — log-scaled total token volume
+//   P/F  Polyglot/ Faithful  — diversity across providers AND models (1 - HHI)
+//   S/B  Steady  / Bursty    — active-day density + best streak
+//   D/Q  Deep    / Quick     — tokens per session (immersion)
+//
+// The continuous scores are exposed (`.scores`) so the result is explainable.
 
 export interface Persona {
   code: string; // e.g. "HPSD"
-  name: string; // e.g. "The Grandmaster"
+  name: string;
   tagline: string;
   color: string;
   axes: string[]; // ["Heavy","Polyglot","Steady","Deep"]
+  scores: { volume: number; diversity: number; rhythm: number; depth: number };
 }
 
 const TYPES: Record<string, { name: string; tagline: string; color: string }> = {
@@ -35,17 +38,51 @@ const TYPES: Record<string, { name: string; tagline: string; color: string }> = 
   LFBQ: { name: "The Minimalist", tagline: "Just enough, one tool, no fuss.", color: "#fb7185" },
 };
 
+/** Herfindahl concentration (Σ shareᵢ²): 1 = one thing, →0 = many even things. */
+function hhi(weights: number[]): number {
+  const total = weights.reduce((a, b) => a + Math.max(0, b), 0);
+  if (total <= 0) return 1;
+  return weights.reduce((a, w) => a + (Math.max(0, w) / total) ** 2, 0);
+}
+
+const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
+
 export function computePersona(stats: Stats): Persona {
   const grand =
     stats.totals.input + stats.totals.cachedInput + stats.totals.cacheCreation + stats.totals.output;
-  const topShare = stats.providers[0]?.share ?? 1;
-  const activeProviders = stats.providers.filter((p) => p.share >= 0.01).length;
-  const avgPerSession = stats.totalSessions ? grand / stats.totalSessions : 0;
 
-  const heavy = grand >= 10e9;
-  const polyglot = activeProviders >= 2 && topShare < 0.8;
-  const steady = stats.maxStreak >= 7;
-  const deep = avgPerSession >= 4e6;
+  // Volume — log-scaled: 1e8 tokens → 0, 1e11 → 1. Midpoint (Heavy) ≈ 3.2e9.
+  const volume = clamp01((Math.log10(Math.max(1, grand)) - 8) / (11 - 8));
+
+  // Diversity — blend provider concentration with model concentration.
+  const providerDiv = 1 - hhi(stats.providers.map((p) => p.tokens));
+  const modelDiv = 1 - hhi(stats.topModels.map((m) => m.tokens));
+  const diversity = clamp01(0.6 * providerDiv + 0.4 * modelDiv);
+
+  // Rhythm — how spread-out activity is across the calendar.
+  const activeDays = Object.keys(stats.dailyActivity).length;
+  const spanDays =
+    stats.firstDay && stats.lastDay
+      ? Math.max(
+          1,
+          Math.round(
+            (new Date(stats.lastDay + "T00:00:00Z").getTime() -
+              new Date(stats.firstDay + "T00:00:00Z").getTime()) /
+              86400000,
+          ) + 1,
+        )
+      : 1;
+  const density = activeDays / spanDays;
+  const rhythm = clamp01(0.7 * density + 0.3 * Math.min(1, stats.maxStreak / 21));
+
+  // Depth — tokens per session (immersion). 250k → 0, 8M → 1.
+  const perSession = stats.totalSessions ? grand / stats.totalSessions : 0;
+  const depth = clamp01((Math.log10(Math.max(1, perSession)) - Math.log10(2.5e5)) / (Math.log10(8e6) - Math.log10(2.5e5)));
+
+  const heavy = volume >= 0.5;
+  const polyglot = diversity >= 0.4;
+  const steady = rhythm >= 0.45;
+  const deep = depth >= 0.5;
 
   const code = (heavy ? "H" : "L") + (polyglot ? "P" : "F") + (steady ? "S" : "B") + (deep ? "D" : "Q");
   const meta = TYPES[code];
@@ -55,5 +92,11 @@ export function computePersona(stats: Stats): Persona {
     tagline: meta.tagline,
     color: meta.color,
     axes: [heavy ? "Heavy" : "Light", polyglot ? "Polyglot" : "Faithful", steady ? "Steady" : "Bursty", deep ? "Deep" : "Quick"],
+    scores: {
+      volume: Math.round(volume * 100) / 100,
+      diversity: Math.round(diversity * 100) / 100,
+      rhythm: Math.round(rhythm * 100) / 100,
+      depth: Math.round(depth * 100) / 100,
+    },
   };
 }

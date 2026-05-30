@@ -25,7 +25,7 @@ const BRAND: Record<string, string> = {
 const HEAT = ["#161c2e", "#22315a", "#2f4f9e", "#4b7be6", "#7aa8ff"];
 
 const WIDTH = 1080;
-const HEIGHT = 1500;
+const HEIGHT = 1640;
 const PAD = 60;
 
 function fmt(n: number): string {
@@ -80,13 +80,32 @@ function Label({ text }: { text: string }) {
 
 export function Card({ stats }: { stats: Stats }) {
   const cols = heatColumns(stats);
-  const HEAT_GAP = 4;
-  const cellSize = Math.max(8, Math.min(20, Math.floor((WIDTH - PAD * 2 - 52) / Math.max(1, cols.length)) - HEAT_GAP));
+  const HEAT_GAP = 5;
+  const HEAT_TRACK = WIDTH - PAD * 2 - 52; // panel inner width
+  // Size cells to fill the track edge-to-edge for any range length.
+  const cellSize = Math.max(7, Math.min(42, Math.floor((HEAT_TRACK - (cols.length - 1) * HEAT_GAP) / Math.max(1, cols.length))));
   const grandTokens =
     stats.totals.input + stats.totals.cachedInput + stats.totals.cacheCreation + stats.totals.output;
   const outputWords = Math.round(stats.totals.output * 0.75);
   const novels = Math.max(1, Math.round(outputWords / 100000));
   const who = computePersona(stats);
+
+  // Provider-focused mode: when exactly one provider is in view, theme the card
+  // to its brand color and show a deeper per-provider token breakdown.
+  const single = stats.providers.length === 1;
+  const focus = single ? stats.providers[0] : null;
+  const accent = focus ? BRAND[focus.provider] ?? C.accentA : C.accentA;
+  const heroGrad = `linear-gradient(95deg, ${accent}, ${C.accentB})`;
+  const breakdown = (
+    [
+      ["Input", stats.totals.input],
+      ["Cache read", stats.totals.cachedInput],
+      ["Cache write", stats.totals.cacheCreation],
+      ["Output", stats.totals.output],
+      ["Reasoning", stats.totals.reasoning],
+    ] as [string, number][]
+  ).filter(([, v]) => v > 0);
+  const bMax = Math.max(1, ...breakdown.map(([, v]) => v));
 
   return (
     <div
@@ -112,10 +131,10 @@ export function Card({ stats }: { stats: Stats }) {
               height: 38,
               borderRadius: 11,
               marginRight: 15,
-              backgroundImage: `linear-gradient(135deg, ${C.accentA}, ${C.accentB})`,
+              backgroundImage: `linear-gradient(135deg, ${accent}, ${C.accentB})`,
             }}
           />
-          <div style={{ display: "flex", fontSize: 33, fontWeight: 700, color: C.white }}>Agents</div>
+          <div style={{ display: "flex", fontSize: 33, fontWeight: 700, color: C.white }}>{focus ? focus.displayName : "Agents"}</div>
           <div style={{ display: "flex", fontSize: 33, color: C.gray, marginLeft: 12 }}>Wrapped</div>
         </div>
         <div
@@ -145,7 +164,7 @@ export function Card({ stats }: { stats: Stats }) {
             fontSize: 132,
             fontWeight: 700,
             lineHeight: 1.05,
-            backgroundImage: `linear-gradient(95deg, ${C.accentA}, ${C.accentB})`,
+            backgroundImage: heroGrad,
             backgroundClip: "text",
             color: "transparent",
           }}
@@ -153,7 +172,7 @@ export function Card({ stats }: { stats: Stats }) {
           {compact(grandTokens)}
         </div>
         <div style={{ display: "flex", fontSize: 22, color: C.gray, letterSpacing: 3, marginTop: 4 }}>
-          TOKENS ACROSS {stats.providers.length} AGENT{stats.providers.length === 1 ? "" : "S"}
+          {focus ? `TOKENS ON ${focus.displayName.toUpperCase()}` : `TOKENS ACROSS ${stats.providers.length} AGENTS`}
         </div>
         <div style={{ display: "flex", fontSize: 18, color: C.faint, marginTop: 12 }}>
           {compact(outputWords)} words generated  ~  {fmt(novels)} novels written
@@ -218,9 +237,9 @@ export function Card({ stats }: { stats: Stats }) {
             {stats.currentStreak}d streak / {stats.maxStreak}d best
           </div>
         </div>
-        <div style={{ display: "flex", justifyContent: "center", marginTop: 16 }}>
+        <div style={{ display: "flex", marginTop: 18 }}>
           {cols.map((col, ci) => (
-            <div key={ci} style={{ display: "flex", flexDirection: "column", marginRight: HEAT_GAP }}>
+            <div key={ci} style={{ display: "flex", flexDirection: "column", marginRight: ci === cols.length - 1 ? 0 : HEAT_GAP }}>
               {col.map((lvl, ri) => (
                 <div
                   key={ri}
@@ -238,7 +257,7 @@ export function Card({ stats }: { stats: Stats }) {
         </div>
       </div>
 
-      {/* Providers (brand-colored) */}
+      {/* Providers comparison (multi) OR per-provider token breakdown (single) */}
       <div
         style={{
           display: "flex",
@@ -250,26 +269,37 @@ export function Card({ stats }: { stats: Stats }) {
           marginBottom: 16,
         }}
       >
-        <Label text="Providers" />
+        <Label text={single ? "Token breakdown" : "Providers"} />
         <div style={{ display: "flex", flexDirection: "column", marginTop: 16 }}>
-          {stats.providers.map((p, i) => {
-            const color = BRAND[p.provider] ?? C.accentA;
-            return (
-              <div key={i} style={{ display: "flex", alignItems: "center", marginBottom: i === stats.providers.length - 1 ? 0 : 14 }}>
-                <div style={{ display: "flex", width: 14, height: 14, borderRadius: 4, backgroundColor: color, marginRight: 14 }} />
-                <div style={{ display: "flex", width: 150, fontSize: 20, color: C.white }}>{p.displayName}</div>
-                <div style={{ display: "flex", flexGrow: 1, height: 16, backgroundColor: "rgba(255,255,255,0.05)", borderRadius: 8, marginRight: 16 }}>
-                  <div style={{ display: "flex", width: `${Math.max(2, Math.round(p.share * 100))}%`, height: 16, backgroundColor: color, borderRadius: 8 }} />
+          {single
+            ? breakdown.map(([k, v], i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", marginBottom: i === breakdown.length - 1 ? 0 : 14 }}>
+                  <div style={{ display: "flex", flexShrink: 0, width: 150, fontSize: 19, color: C.gray }}>{k}</div>
+                  <div style={{ display: "flex", flexGrow: 1, height: 16, backgroundColor: "rgba(255,255,255,0.05)", borderRadius: 8, marginRight: 18 }}>
+                    <div style={{ display: "flex", width: `${Math.max(2, Math.round((v / bMax) * 100))}%`, height: 16, backgroundColor: accent, borderRadius: 8 }} />
+                  </div>
+                  <div style={{ display: "flex", flexShrink: 0, width: 96, fontSize: 18, color: C.white, justifyContent: "flex-end" }}>{compact(v)}</div>
                 </div>
-                <div style={{ display: "flex", width: 110, fontSize: 18, color: C.gray, justifyContent: "flex-end" }}>{compact(p.tokens)} tok</div>
-              </div>
-            );
-          })}
+              ))
+            : stats.providers.map((p, i) => {
+                const color = BRAND[p.provider] ?? C.accentA;
+                return (
+                  <div key={i} style={{ display: "flex", alignItems: "center", marginBottom: i === stats.providers.length - 1 ? 0 : 14 }}>
+                    <div style={{ display: "flex", flexShrink: 0, width: 14, height: 14, borderRadius: 4, backgroundColor: color, marginRight: 14 }} />
+                    <div style={{ display: "flex", flexShrink: 0, width: 148, fontSize: 20, color: C.white }}>{p.displayName}</div>
+                    <div style={{ display: "flex", flexGrow: 1, height: 16, backgroundColor: "rgba(255,255,255,0.05)", borderRadius: 8, marginRight: 18 }}>
+                      <div style={{ display: "flex", width: `${Math.max(2, Math.round(p.share * 100))}%`, height: 16, backgroundColor: color, borderRadius: 8 }} />
+                    </div>
+                    <div style={{ display: "flex", flexShrink: 0, width: 64, fontSize: 18, color: C.white, justifyContent: "flex-end", marginRight: 14 }}>{compact(p.tokens)}</div>
+                    <div style={{ display: "flex", flexShrink: 0, width: 52, fontSize: 18, color: C.faint, justifyContent: "flex-end" }}>{Math.round(p.share * 100)}%</div>
+                  </div>
+                );
+              })}
         </div>
       </div>
 
       {/* Top models + key stats */}
-      <div style={{ display: "flex", marginBottom: 16 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", marginBottom: 16 }}>
         <div
           style={{
             display: "flex",
@@ -285,9 +315,9 @@ export function Card({ stats }: { stats: Stats }) {
         >
           <Label text="Top models" />
           <div style={{ display: "flex", flexDirection: "column", marginTop: 14 }}>
-            {stats.topModels.slice(0, 4).map((m, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", marginBottom: 13 }}>
-                <div style={{ display: "flex", width: 24, fontSize: 18, fontWeight: 700, color: C.accentA }}>{i + 1}</div>
+            {stats.topModels.slice(0, 5).map((m, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", marginBottom: i === Math.min(4, stats.topModels.length - 1) ? 0 : 13 }}>
+                <div style={{ display: "flex", width: 24, fontSize: 18, fontWeight: 700, color: accent }}>{i + 1}</div>
                 <div style={{ display: "flex", flexGrow: 1, fontSize: 17, color: C.white }}>{m.model}</div>
                 <div style={{ display: "flex", fontSize: 15, color: C.gray }}>{compact(m.tokens)}</div>
               </div>
@@ -333,8 +363,8 @@ export function Card({ stats }: { stats: Stats }) {
             padding: "12px 20px",
           }}
         >
-          <div style={{ display: "flex", fontSize: 20, color: C.accentA, marginRight: 12 }}>$</div>
-          <div style={{ display: "flex", fontSize: 20, color: C.white }}>npx agents-wrapped</div>
+          <div style={{ display: "flex", fontSize: 20, color: accent, marginRight: 12 }}>$</div>
+          <div style={{ display: "flex", fontSize: 20, color: C.white }}>npx agents-wrapped{focus ? ` --provider ${focus.provider}` : ""}</div>
         </div>
         <div style={{ display: "flex", fontSize: 16, color: C.faint }}>make your own ~</div>
       </div>
