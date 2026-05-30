@@ -1,6 +1,7 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
+import pkg from "../package.json" with { type: "json" };
 import { ADAPTERS, detectAvailable } from "./adapters/index.js";
 import { aggregate } from "./core/aggregate.js";
 import { resolveRange } from "./core/daterange.js";
@@ -29,6 +30,7 @@ Output:
   --out <path>         PNG output path (implies --png).
   --json               Print raw stats as JSON instead of the card.
   -h, --help           Show this help.
+  -v, --version        Print version.
 `;
 
 async function main() {
@@ -45,6 +47,7 @@ async function main() {
       png: { type: "boolean" },
       out: { type: "string" },
       help: { type: "boolean", short: "h" },
+      version: { type: "boolean", short: "v" },
     },
     allowPositionals: true,
   });
@@ -54,12 +57,18 @@ async function main() {
     return;
   }
 
+  if (values.version) {
+    process.stdout.write(`agents-wrapped ${pkg.version}\n`);
+    return;
+  }
+
   const available = await detectAvailable();
   if (values["list-providers"]) {
-    process.stdout.write("Detected providers:\n");
+    process.stdout.write("Providers (✓ = data found on this machine):\n");
     for (const a of ADAPTERS) {
       const ok = available.some((x) => x.id === a.id);
-      process.stdout.write(`  ${ok ? "✓" : "·"} ${a.id.padEnd(10)} ${a.displayName}\n`);
+      const tag = a.experimental ? " (experimental)" : "";
+      process.stdout.write(`  ${ok ? "✓" : "·"} ${a.id.padEnd(10)} ${a.displayName}${tag}\n`);
     }
     return;
   }
