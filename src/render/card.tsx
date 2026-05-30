@@ -319,11 +319,11 @@ export function Card({ stats, theme = "dark" }: { stats: Stats; theme?: Theme })
           {single
             ? breakdown.map(([k, v], i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", marginBottom: i === breakdown.length - 1 ? 0 : 14 }}>
-                  <div style={{ display: "flex", flexShrink: 0, width: 150, fontSize: 19, color: C.gray }}>{k}</div>
-                  <div style={{ display: "flex", flexGrow: 1, height: 16, backgroundColor: C.track, borderRadius: 8, marginRight: 18 }}>
+                  <div style={{ display: "flex", flexShrink: 0, width: 140, fontSize: 19, color: C.gray }}>{k}</div>
+                  <div style={{ display: "flex", flexGrow: 1, flexShrink: 1, flexBasis: 0, height: 16, backgroundColor: C.track, borderRadius: 8, marginRight: 20 }}>
                     <div style={{ display: "flex", width: `${Math.max(2, Math.round((v / bMax) * 100))}%`, height: 16, backgroundColor: accent, borderRadius: 8 }} />
                   </div>
-                  <div style={{ display: "flex", flexShrink: 0, width: 96, fontSize: 18, color: C.white, justifyContent: "flex-end" }}>{compact(v)}</div>
+                  <div style={{ display: "flex", flexShrink: 0, width: 110, fontSize: 18, color: C.white, justifyContent: "flex-end" }}>{compact(v)}</div>
                 </div>
               ))
             : stats.providers.map((p, i) => {
@@ -331,12 +331,14 @@ export function Card({ stats, theme = "dark" }: { stats: Stats; theme?: Theme })
                 return (
                   <div key={i} style={{ display: "flex", alignItems: "center", marginBottom: i === stats.providers.length - 1 ? 0 : 14 }}>
                     <div style={{ display: "flex", flexShrink: 0, width: 14, height: 14, borderRadius: 4, backgroundColor: color, marginRight: 14 }} />
-                    <div style={{ display: "flex", flexShrink: 0, width: 148, fontSize: 20, color: C.white }}>{p.displayName}</div>
-                    <div style={{ display: "flex", flexGrow: 1, height: 16, backgroundColor: C.track, borderRadius: 8, marginRight: 18 }}>
+                    <div style={{ display: "flex", flexShrink: 0, width: 140, fontSize: 20, color: C.white }}>{p.displayName}</div>
+                    <div style={{ display: "flex", flexGrow: 1, flexShrink: 1, flexBasis: 0, height: 16, backgroundColor: C.track, borderRadius: 8, marginRight: 20 }}>
                       <div style={{ display: "flex", width: `${Math.max(2, Math.round(p.share * 100))}%`, height: 16, backgroundColor: color, borderRadius: 8 }} />
                     </div>
-                    <div style={{ display: "flex", flexShrink: 0, width: 64, fontSize: 18, color: C.white, justifyContent: "flex-end", marginRight: 14 }}>{compact(p.tokens)}</div>
-                    <div style={{ display: "flex", flexShrink: 0, width: 52, fontSize: 18, color: C.faint, justifyContent: "flex-end" }}>{Math.round(p.share * 100)}%</div>
+                    <div style={{ display: "flex", flexShrink: 0, width: 150, justifyContent: "flex-end", alignItems: "center" }}>
+                      <div style={{ display: "flex", fontSize: 18, color: C.white }}>{compact(p.tokens)}</div>
+                      <div style={{ display: "flex", fontSize: 16, color: C.faint, marginLeft: 14, width: 46, justifyContent: "flex-end" }}>{Math.round(p.share * 100)}%</div>
+                    </div>
                   </div>
                 );
               })}
