@@ -4,25 +4,60 @@ import type { Stats } from "../types.js";
 // Satori template for the shareable PNG card. Flexbox only; ASCII-only text
 // (the bundled font is a latin subset); heatmap/bars are colored <div>s.
 
-const C = {
+export type Theme = "dark" | "light";
+
+interface Palette {
+  white: string;
+  gray: string;
+  faint: string;
+  panel: string;
+  border: string;
+  track: string;
+  accentA: string;
+  accentB: string;
+  bg: string;
+  bgImage: string;
+  heat: string[];
+}
+
+const DARK: Palette = {
   white: "#eef2fb",
   gray: "#9aa4b8",
   faint: "#5b6577",
   panel: "rgba(255,255,255,0.04)",
   border: "rgba(255,255,255,0.08)",
+  track: "rgba(255,255,255,0.05)",
   accentA: "#5b9dff",
   accentB: "#a274ff",
+  bg: "#0a0e1a",
+  bgImage:
+    "radial-gradient(900px 520px at 50% -8%, rgba(91,157,255,0.16), rgba(10,14,26,0) 70%), linear-gradient(168deg, #0c1122 0%, #0a0e1a 60%, #0b0f1e 100%)",
+  heat: ["#161c2e", "#22315a", "#2f4f9e", "#4b7be6", "#7aa8ff"],
+};
+
+const LIGHT: Palette = {
+  white: "#1b2233",
+  gray: "#566076",
+  faint: "#98a2b6",
+  panel: "rgba(20,30,60,0.035)",
+  border: "rgba(20,30,60,0.12)",
+  track: "rgba(20,30,60,0.08)",
+  accentA: "#3b6ff5",
+  accentB: "#8b5cf6",
+  bg: "#f4f6fb",
+  bgImage:
+    "radial-gradient(900px 520px at 50% -8%, rgba(91,141,255,0.14), rgba(244,246,251,0) 70%), linear-gradient(168deg, #f8f9fe 0%, #eef1f8 60%, #f4f6fb 100%)",
+  heat: ["#e4e9f3", "#c2d4f4", "#94b6f0", "#5b8df5", "#3b6ff5"],
 };
 
 // Per-provider brand-ish colors so the card reads at a glance.
 const BRAND: Record<string, string> = {
-  codex: "#10a37f", // OpenAI green
-  claude: "#d97757", // Anthropic clay
-  opencode: "#a78bfa", // violet
-  gemini: "#4285f4", // Google blue
-  copilot: "#6cc644", // GitHub green
+  codex: "#10a37f",
+  claude: "#d97757",
+  opencode: "#8b5cf6",
+  gemini: "#4285f4",
+  copilot: "#3fb950",
 };
-const HEAT = ["#161c2e", "#22315a", "#2f4f9e", "#4b7be6", "#7aa8ff"];
 
 const WIDTH = 1080;
 const HEIGHT = 1640;
@@ -41,6 +76,15 @@ function compact(n: number): string {
 function usd(n: number): string {
   if (n >= 1000) return "$" + (n / 1000).toFixed(1) + "k";
   return "$" + n.toFixed(0);
+}
+
+/** Multiply a hex color's channels by `factor` (<1 darkens). For light-theme contrast. */
+function shade(hex: string, factor: number): string {
+  const m = /^#?([0-9a-fA-F]{6})$/.exec(hex);
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  const ch = (shift: number) => Math.round(Math.min(255, ((n >> shift) & 255) * factor));
+  return `rgb(${ch(16)},${ch(8)},${ch(0)})`;
 }
 
 function heatColumns(stats: Stats): number[][] {
@@ -72,17 +116,16 @@ function heatColumns(stats: Stats): number[][] {
   return cols;
 }
 
-function Label({ text }: { text: string }) {
-  return (
+export function Card({ stats, theme = "dark" }: { stats: Stats; theme?: Theme }) {
+  const C = theme === "light" ? LIGHT : DARK;
+  const HEAT = C.heat;
+  const Label = ({ text }: { text: string }) => (
     <div style={{ fontSize: 16, color: C.gray, letterSpacing: 3, textTransform: "uppercase" }}>{text}</div>
   );
-}
 
-export function Card({ stats }: { stats: Stats }) {
   const cols = heatColumns(stats);
   const HEAT_GAP = 5;
-  const HEAT_TRACK = WIDTH - PAD * 2 - 52; // panel inner width
-  // Size cells to fill the track edge-to-edge for any range length.
+  const HEAT_TRACK = WIDTH - PAD * 2 - 52;
   const cellSize = Math.max(7, Math.min(42, Math.floor((HEAT_TRACK - (cols.length - 1) * HEAT_GAP) / Math.max(1, cols.length))));
   const grandTokens =
     stats.totals.input + stats.totals.cachedInput + stats.totals.cacheCreation + stats.totals.output;
@@ -90,12 +133,15 @@ export function Card({ stats }: { stats: Stats }) {
   const novels = Math.max(1, Math.round(outputWords / 100000));
   const who = computePersona(stats);
 
-  // Provider-focused mode: when exactly one provider is in view, theme the card
-  // to its brand color and show a deeper per-provider token breakdown.
+  // Provider-focused mode: one provider in view → theme to its brand color.
   const single = stats.providers.length === 1;
   const focus = single ? stats.providers[0] : null;
   const accent = focus ? BRAND[focus.provider] ?? C.accentA : C.accentA;
   const heroGrad = `linear-gradient(95deg, ${accent}, ${C.accentB})`;
+  // In single mode the persona band adopts the provider color; otherwise its own.
+  // On light theme, darken it so the pale persona hues stay readable.
+  const rawBand = single ? accent : who.color;
+  const bandColor = theme === "light" ? shade(rawBand, 0.62) : rawBand;
   const breakdown = (
     [
       ["Input", stats.totals.input],
@@ -114,9 +160,8 @@ export function Card({ stats }: { stats: Stats }) {
         flexDirection: "column",
         width: WIDTH,
         height: HEIGHT,
-        backgroundColor: "#0a0e1a",
-        backgroundImage:
-          "radial-gradient(900px 520px at 50% -8%, rgba(91,157,255,0.16), rgba(10,14,26,0) 70%), linear-gradient(168deg, #0c1122 0%, #0a0e1a 60%, #0b0f1e 100%)",
+        backgroundColor: C.bg,
+        backgroundImage: C.bgImage,
         padding: PAD,
         fontFamily: "IBM Plex Mono",
       }}
@@ -140,13 +185,13 @@ export function Card({ stats }: { stats: Stats }) {
         <div
           style={{
             display: "flex",
-            border: `1px solid ${who.color}`,
+            border: `1px solid ${bandColor}`,
             borderRadius: 999,
             padding: "8px 18px",
             fontSize: 17,
             fontWeight: 700,
             letterSpacing: 3,
-            color: who.color,
+            color: bandColor,
           }}
         >
           {who.code}
@@ -179,13 +224,13 @@ export function Card({ stats }: { stats: Stats }) {
         </div>
       </div>
 
-      {/* Persona band — the shareable "16 personalities" result */}
+      {/* Persona band */}
       <div
         style={{
           display: "flex",
           flexDirection: "column",
-          backgroundColor: "rgba(255,255,255,0.04)",
-          border: `1px solid ${who.color}`,
+          backgroundColor: C.panel,
+          border: `1px solid ${bandColor}`,
           borderRadius: 20,
           padding: "20px 26px",
           marginBottom: 16,
@@ -193,8 +238,8 @@ export function Card({ stats }: { stats: Stats }) {
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center" }}>
-            <div style={{ display: "flex", width: 12, height: 12, borderRadius: 6, backgroundColor: who.color, marginRight: 12 }} />
-            <div style={{ display: "flex", fontSize: 30, fontWeight: 700, color: who.color }}>{who.name}</div>
+            <div style={{ display: "flex", width: 12, height: 12, borderRadius: 6, backgroundColor: bandColor, marginRight: 12 }} />
+            <div style={{ display: "flex", fontSize: 30, fontWeight: 700, color: bandColor }}>{who.name}</div>
           </div>
           <div style={{ display: "flex", fontSize: 22, fontWeight: 700, letterSpacing: 4, color: C.gray }}>{who.code}</div>
         </div>
@@ -275,7 +320,7 @@ export function Card({ stats }: { stats: Stats }) {
             ? breakdown.map(([k, v], i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", marginBottom: i === breakdown.length - 1 ? 0 : 14 }}>
                   <div style={{ display: "flex", flexShrink: 0, width: 150, fontSize: 19, color: C.gray }}>{k}</div>
-                  <div style={{ display: "flex", flexGrow: 1, height: 16, backgroundColor: "rgba(255,255,255,0.05)", borderRadius: 8, marginRight: 18 }}>
+                  <div style={{ display: "flex", flexGrow: 1, height: 16, backgroundColor: C.track, borderRadius: 8, marginRight: 18 }}>
                     <div style={{ display: "flex", width: `${Math.max(2, Math.round((v / bMax) * 100))}%`, height: 16, backgroundColor: accent, borderRadius: 8 }} />
                   </div>
                   <div style={{ display: "flex", flexShrink: 0, width: 96, fontSize: 18, color: C.white, justifyContent: "flex-end" }}>{compact(v)}</div>
@@ -287,7 +332,7 @@ export function Card({ stats }: { stats: Stats }) {
                   <div key={i} style={{ display: "flex", alignItems: "center", marginBottom: i === stats.providers.length - 1 ? 0 : 14 }}>
                     <div style={{ display: "flex", flexShrink: 0, width: 14, height: 14, borderRadius: 4, backgroundColor: color, marginRight: 14 }} />
                     <div style={{ display: "flex", flexShrink: 0, width: 148, fontSize: 20, color: C.white }}>{p.displayName}</div>
-                    <div style={{ display: "flex", flexGrow: 1, height: 16, backgroundColor: "rgba(255,255,255,0.05)", borderRadius: 8, marginRight: 18 }}>
+                    <div style={{ display: "flex", flexGrow: 1, height: 16, backgroundColor: C.track, borderRadius: 8, marginRight: 18 }}>
                       <div style={{ display: "flex", width: `${Math.max(2, Math.round(p.share * 100))}%`, height: 16, backgroundColor: color, borderRadius: 8 }} />
                     </div>
                     <div style={{ display: "flex", flexShrink: 0, width: 64, fontSize: 18, color: C.white, justifyContent: "flex-end", marginRight: 14 }}>{compact(p.tokens)}</div>
@@ -357,7 +402,7 @@ export function Card({ stats }: { stats: Stats }) {
           style={{
             display: "flex",
             alignItems: "center",
-            backgroundColor: "rgba(255,255,255,0.05)",
+            backgroundColor: C.track,
             border: `1px solid ${C.border}`,
             borderRadius: 12,
             padding: "12px 20px",

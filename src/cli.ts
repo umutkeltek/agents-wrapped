@@ -28,6 +28,7 @@ Providers:
 Output:
   --png                Also render a shareable PNG card (~/agents-wrapped.png).
   --out <path>         PNG output path (implies --png).
+  --theme <dark|light> Card theme (default: dark).
   --json               Print raw stats as JSON instead of the card.
   -h, --help           Show this help.
   -v, --version        Print version.
@@ -46,6 +47,7 @@ async function main() {
       json: { type: "boolean" },
       png: { type: "boolean" },
       out: { type: "string" },
+      theme: { type: "string" },
       help: { type: "boolean", short: "h" },
       version: { type: "boolean", short: "v" },
     },
@@ -126,8 +128,9 @@ async function main() {
   if (values.png || values.out) {
     const { renderPng } = await import("./render/png.js");
     const outPath = values.out ?? join(homedir(), "agents-wrapped.png");
-    process.stdout.write(`  Rendering card → ${outPath} …\n`);
-    await renderPng(stats, outPath);
+    const theme = values.theme === "light" ? "light" : "dark";
+    process.stdout.write(`  Rendering ${theme} card → ${outPath} …\n`);
+    await renderPng(stats, outPath, theme);
     process.stdout.write(`  ✓ Saved ${outPath}\n\n`);
   }
 }

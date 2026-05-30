@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import { initWasm, Resvg } from "@resvg/resvg-wasm";
 import satori from "satori";
 import type { Stats } from "../types.js";
-import { Card } from "./card.js";
+import { Card, type Theme } from "./card.js";
 import { loadFonts } from "./fonts.js";
 
 const CARD_WIDTH = 1080;
@@ -21,10 +21,15 @@ function ensureWasm(): Promise<void> {
 }
 
 /** Render the stats card to a PNG file. Returns the output path. */
-export async function renderPng(stats: Stats, outPath: string, scale = DEFAULT_SCALE): Promise<string> {
+export async function renderPng(
+  stats: Stats,
+  outPath: string,
+  theme: Theme = "dark",
+  scale = DEFAULT_SCALE,
+): Promise<string> {
   const fonts = await loadFonts();
   // Card() returns a JSX element; satori's element type is its own ReactNode.
-  const element = Card({ stats }) as Parameters<typeof satori>[0];
+  const element = Card({ stats, theme }) as Parameters<typeof satori>[0];
   const svg = await satori(element, { width: CARD_WIDTH, height: CARD_HEIGHT, fonts });
 
   await ensureWasm();

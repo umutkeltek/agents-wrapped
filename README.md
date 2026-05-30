@@ -59,6 +59,7 @@ Providers
 Output
   --png                    Also render a shareable PNG (~/agents-wrapped.png)
   --out <path>             PNG output path (implies --png)
+  --theme <dark|light>     Card theme (default: dark)
   --json                   Print raw stats as JSON (for scripting)
 
   -h, --help               Show help
@@ -77,7 +78,7 @@ agents-wrapped --json | jq '.topModels'
 The `--png` card renders at 2× for crisp sharing. Pass a single `--provider`
 (e.g. `--provider codex`) and the card **re-themes to that tool's brand color**,
 retitles ("Codex Wrapped"), and swaps the provider comparison for a deeper
-per-provider token breakdown.
+per-provider token breakdown. Add `--theme light` for a light variant.
 
 ## Your coding personality
 
