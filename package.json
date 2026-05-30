@@ -1,0 +1,37 @@
+{
+  "name": "agents-wrapped",
+  "version": "0.1.0",
+  "description": "Wrapped-style usage stats across all your AI coding agents (Codex, Claude Code, ...) for any date range.",
+  "type": "module",
+  "bin": {
+    "agents-wrapped": "./bin/agents-wrapped.js"
+  },
+  "files": [
+    "bin",
+    "dist"
+  ],
+  "scripts": {
+    "start": "bun src/cli.ts",
+    "dev": "bun src/cli.ts",
+    "build": "bun build src/cli.ts --target node --outdir dist --minify",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "codex",
+    "claude-code",
+    "wrapped",
+    "usage",
+    "stats",
+    "cli",
+    "ai",
+    "tokens",
+    "ccusage"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  }
+}
