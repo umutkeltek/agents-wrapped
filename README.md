@@ -42,7 +42,7 @@ From a clone (Bun):
 
 ```bash
 bun install
-bun src/cli.ts --all --png
+bun src/cli.ts --last 30d
 ```
 
 ## Commands
@@ -71,19 +71,48 @@ Output (a shareable PNG is created AND opened by default)
   -v, --version            Print version
 ```
 
-Examples:
+### What happens when you run it
+
+`agents-wrapped` (no flags) does three things in one shot:
+
+1. detects which agents have data on this machine (Codex, Claude Code, OpenCode…),
+2. prints a stats summary to your terminal, and
+3. renders a crisp 2× shareable card to `~/agents-wrapped.png` **and opens it**.
+
+No config, no API keys, no sign-in — it just reads the local logs each agent
+already writes.
+
+### Choosing a time period
+
+Default is **all time**. Pick a window with one of:
 
 ```bash
-agents-wrapped --year 2025
-agents-wrapped --from 2026-01-01 --to 2026-03-31 --png
-agents-wrapped --provider codex --last 7d
-agents-wrapped --json | jq '.topModels'
+agents-wrapped --year 2025                      # a calendar year
+agents-wrapped --last 30d                        # relative: 30d, 12w, 6m, 1y
+agents-wrapped --from 2026-01-01 --to 2026-03-31 # an explicit range
 ```
 
-The `--png` card renders at 2× for crisp sharing. Pass a single `--provider`
-(e.g. `--provider codex`) and the card **re-themes to that tool's brand color**,
-retitles ("Codex Wrapped"), and swaps the provider comparison for a deeper
-per-provider token breakdown. Add `--theme light` for a light variant.
+### Focusing on one agent
+
+Pass a single `--provider` and the whole card **re-themes to that tool's brand
+color**, retitles ("Codex Wrapped"), recomputes your personality, and replaces the
+provider comparison with a deeper per-provider token breakdown:
+
+```bash
+agents-wrapped --provider codex
+agents-wrapped --provider claude --theme light   # one tool + light card
+agents-wrapped --provider codex,claude           # a subset (comma-separated)
+```
+
+### Controlling the output
+
+```bash
+agents-wrapped --out ~/Desktop/wrapped.png   # save to a specific path
+agents-wrapped --no-open                      # make the PNG but don't open it
+agents-wrapped --no-png                        # terminal summary only
+agents-wrapped --json | jq '.persona'          # raw stats for scripting (no PNG)
+agents-wrapped --list-providers                # what was detected on this machine
+```
 
 ## Your coding personality
 
