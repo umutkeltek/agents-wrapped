@@ -1,3 +1,4 @@
+import { computePersona } from "../core/persona.js";
 import type { Stats } from "../types.js";
 
 // ANSI terminal rendering of the wrapped card.
@@ -104,6 +105,14 @@ export function renderTerminal(stats: Stats): string {
         .map(([v, k]) => `${C.bold}${C.cyan}${v}${C.reset} ${C.gray}${k}${C.reset}`)
         .join("   "),
   );
+  line();
+
+  // Persona — the 16-type result
+  const persona = computePersona(stats);
+  line(
+    `  ${C.bold}${C.cyan}${persona.name}${C.reset} ${C.dim}(${persona.code})${C.reset}  ${C.gray}${persona.axes.join(" · ")}${C.reset}`,
+  );
+  line(`  ${C.dim}${persona.tagline}${C.reset}`);
   line();
 
   // Activity heatmap

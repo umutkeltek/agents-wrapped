@@ -116,7 +116,8 @@ async function main() {
   const stats = aggregate(records, range, pricing);
 
   if (values.json) {
-    process.stdout.write(JSON.stringify(stats, null, 2) + "\n");
+    const { computePersona } = await import("./core/persona.js");
+    process.stdout.write(JSON.stringify({ ...stats, persona: computePersona(stats) }, null, 2) + "\n");
     return;
   }
 
