@@ -29,10 +29,14 @@ it to the terminal and a shareable PNG.
 ## Quick start
 
 ```bash
-npx agents-wrapped                 # all time, every detected provider
+npx agents-wrapped                 # one command: prints stats, makes + OPENS your shareable card
 npx agents-wrapped --last 30d      # last 30 days
-npx agents-wrapped --all --png     # all time + a shareable card (~/agents-wrapped.png)
+npx agents-wrapped --provider codex --theme light   # one provider, light card
 ```
+
+That single command works for any user with no setup — it reads the local logs each
+agent already writes, renders `~/agents-wrapped.png`, and opens it. Add `--no-png`
+for terminal-only or `--no-open` to skip opening.
 
 From a clone (Bun):
 
@@ -56,11 +60,12 @@ Providers
   --provider <ids>         Comma-separated subset, e.g. codex,claude
   --list-providers         Show every provider and whether data was found
 
-Output
-  --png                    Also render a shareable PNG (~/agents-wrapped.png)
-  --out <path>             PNG output path (implies --png)
+Output (a shareable PNG is created AND opened by default)
+  --out <path>             PNG output path (default: ~/agents-wrapped.png)
   --theme <dark|light>     Card theme (default: dark)
-  --json                   Print raw stats as JSON (for scripting)
+  --no-open                Create the PNG but don't open it
+  --no-png                 Terminal summary only, skip the PNG
+  --json                   Print raw stats as JSON (for scripting; no PNG)
 
   -h, --help               Show help
   -v, --version            Print version

@@ -1,3 +1,4 @@
+import { spawn } from "node:child_process";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
@@ -25,14 +26,28 @@ Providers:
   --provider <ids>     Comma-separated subset (codex,claude). Default: all detected.
   --list-providers     Show detected providers and exit.
 
-Output:
-  --png                Also render a shareable PNG card (~/agents-wrapped.png).
-  --out <path>         PNG output path (implies --png).
+Output (by default a shareable PNG is created AND opened):
+  --out <path>         PNG output path (default: ~/agents-wrapped.png).
   --theme <dark|light> Card theme (default: dark).
-  --json               Print raw stats as JSON instead of the card.
+  --no-open            Create the PNG but don't open it.
+  --no-png             Terminal summary only, skip the PNG.
+  --json               Print raw stats as JSON (for scripting; no PNG).
   -h, --help           Show this help.
   -v, --version        Print version.
 `;
+
+/** Open a file with the OS default app (best-effort, cross-platform). */
+function openFile(path: string): void {
+  const cmd = process.platform === "darwin" ? "open" : process.platform === "win32" ? "cmd" : "xdg-open";
+  const args = process.platform === "win32" ? ["/c", "start", "", path] : [path];
+  try {
+    const child = spawn(cmd, args, { stdio: "ignore", detached: true });
+    child.on("error", () => {});
+    child.unref();
+  } catch {
+    /* opening is best-effort */
+  }
+}
 
 async function main() {
   const { values } = parseArgs({
@@ -46,6 +61,8 @@ async function main() {
       "list-providers": { type: "boolean" },
       json: { type: "boolean" },
       png: { type: "boolean" },
+      "no-png": { type: "boolean" },
+      "no-open": { type: "boolean" },
       out: { type: "string" },
       theme: { type: "string" },
       help: { type: "boolean", short: "h" },
@@ -125,13 +142,24 @@ async function main() {
 
   process.stdout.write(renderTerminal(stats) + "\n");
 
-  if (values.png || values.out) {
-    const { renderPng } = await import("./render/png.js");
+  // A shareable PNG is created (and opened) by default — one command, done.
+  if (!values["no-png"]) {
     const outPath = values.out ?? join(homedir(), "agents-wrapped.png");
     const theme = values.theme === "light" ? "light" : "dark";
-    process.stdout.write(`  Rendering ${theme} card → ${outPath} …\n`);
-    await renderPng(stats, outPath, theme);
-    process.stdout.write(`  ✓ Saved ${outPath}\n\n`);
+    try {
+      process.stdout.write(`  Rendering ${theme} card …\n`);
+      const { renderPng } = await import("./render/png.js");
+      await renderPng(stats, outPath, theme);
+      process.stdout.write(`  ✓ Saved shareable card → ${outPath}\n`);
+      if (!values["no-open"]) {
+        openFile(outPath);
+        process.stdout.write("  ↗ Opening it…\n\n");
+      } else {
+        process.stdout.write("\n");
+      }
+    } catch (err: any) {
+      process.stdout.write(`  (card skipped — ${err?.message ?? err}; rerun with --no-png to silence)\n\n`);
+    }
   }
 }
 

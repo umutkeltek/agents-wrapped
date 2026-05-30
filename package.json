@@ -1,6 +1,6 @@
 {
   "name": "agents-wrapped",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Wrapped-style usage stats across all your AI coding agents (Codex, Claude Code, OpenCode, …) for any date range — with a shareable card and a 16-type coding personality.",
   "type": "module",
   "bin": {
