@@ -55,6 +55,8 @@ export interface AdapterContext {
 export interface ProviderAdapter {
   id: ProviderId;
   displayName: string;
+  /** Best-effort parser not yet verified against real data. */
+  experimental?: boolean;
   /** Cheap check: is this provider's data present on disk? */
   detect(): Promise<boolean>;
   /** Read normalized usage records overlapping the range. */
