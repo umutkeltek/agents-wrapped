@@ -45,7 +45,12 @@ agents-wrapped --from 2025-01-01 --to 2025-03-31
 agents-wrapped --provider codex      # one provider
 agents-wrapped --list-providers      # what was detected
 agents-wrapped --json                # raw stats for scripting
+agents-wrapped --png                 # also save a shareable card (~/agents-wrapped.png)
+agents-wrapped --last 30d --out card.png   # render the card to a path
 ```
+
+The terminal card prints by default; add `--png` (or `--out <path>`) to also render
+a shareable image of the same stats.
 
 ## Supported providers
 
@@ -83,9 +88,9 @@ ballpark; authoritative spend lives in each provider's usage API.
 
 ## Roadmap
 
-- Shareable PNG card (Satori → Resvg)
 - OpenCode, Gemini, Copilot adapters
 - Optional provider-API cost mode for billing-accurate numbers
+- Auto-copy the rendered card to the clipboard
 
 ## License
 
