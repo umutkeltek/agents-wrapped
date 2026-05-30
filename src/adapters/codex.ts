@@ -1,6 +1,7 @@
-import { readdir, readFile, stat } from "node:fs/promises";
+import { readdir, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { readLines } from "../core/lines.js";
 import type { AdapterContext, ProviderAdapter, UsageRecord } from "../types.js";
 
 // Codex CLI logs live at $CODEX_HOME/sessions/{YYYY}/{MM}/{DD}/rollout-*.jsonl
@@ -62,19 +63,14 @@ async function parseSessionFile(
   start: Date,
   end: Date,
 ): Promise<UsageRecord[]> {
-  let text: string;
-  try {
-    text = await readFile(path, "utf8");
-  } catch {
-    return [];
-  }
   const records: UsageRecord[] = [];
   let cwd = "unknown";
   let model = "gpt-5";
   let sessionId = path; // fallback identity = file path
   let prevTotal: CodexTokenUsage | null = null;
 
-  for (const line of text.split("\n")) {
+  try {
+    for await (const line of readLines(path)) {
     if (!line) continue;
     let obj: any;
     try {
@@ -154,6 +150,9 @@ async function parseSessionFile(
         },
       });
     }
+  }
+  } catch {
+    // A read error mid-file keeps whatever parsed so far.
   }
   return records;
 }

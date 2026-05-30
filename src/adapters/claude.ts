@@ -1,6 +1,7 @@
-import { readdir, readFile, stat } from "node:fs/promises";
+import { readdir, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { readLines } from "../core/lines.js";
 import type { AdapterContext, ProviderAdapter, UsageRecord } from "../types.js";
 
 // Claude Code logs live at $CLAUDE_CONFIG_DIR/projects/{encoded-cwd}/{sessionId}.jsonl
@@ -64,14 +65,9 @@ async function parseSessionFile(
   end: Date,
   seen: Set<string>,
 ): Promise<UsageRecord[]> {
-  let text: string;
-  try {
-    text = await readFile(path, "utf8");
-  } catch {
-    return [];
-  }
   const records: UsageRecord[] = [];
-  for (const line of text.split("\n")) {
+  try {
+    for await (const line of readLines(path)) {
     if (!line || line.indexOf('"input_tokens"') === -1) continue;
     let obj: any;
     try {
@@ -117,6 +113,9 @@ async function parseSessionFile(
       },
       costUSD: typeof obj.costUSD === "number" ? obj.costUSD : undefined,
     });
+    }
+  } catch {
+    // A read error mid-file keeps whatever parsed so far.
   }
   return records;
 }
